@@ -1,3 +1,18 @@
 .idea/
 *.exe
 
+# Logisim autosave
+.CPU_design.circ.autosave
+
+# Verilog build artifacts
+verilog/rom_init.mem
+verilog/cpu_sim
+verilog/cpu_isim
+verilog/cpu_sim.vcd
+verilog/sim
+verilog/isim
+
+# Generated netlist output
+cpu_netlist.json
+cpu_netlist.svg
+
