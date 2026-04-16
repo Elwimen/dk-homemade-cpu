@@ -2,8 +2,8 @@
 //
 // Simulates a terminal session:
 //   - Captures TTY output (out2=1, out1!=0) and prints to stdout
-//   - Injects keyboard input "help\n" character by character
-//   - Terminates after 12 000 clock cycles (enough for banner + help response)
+//   - Injects keyboard input "help\n" then "exit\n" character by character
+//   - Terminates when CPU asserts out2=0xFF (halt signal from exit command)
 //
 // Run with:
 //   iverilog -g2012 -o sim tb_cpu.v cpu.v && ./sim
@@ -38,19 +38,30 @@ module tb_cpu;
     always #5 clk = ~clk;
 
     // -----------------------------------------------------------------------
+    // Cycle counter (used by halt and timeout messages)
+    // -----------------------------------------------------------------------
+    integer cycle_count = 0;
+    always @(posedge clk) cycle_count <= cycle_count + 1;
+
+    // -----------------------------------------------------------------------
     // TTY output capture
     //
     // The CPU sets out2=1 (print mode) and loads out1 with each character.
     // One character per clock cycle flows through out1 while out2=1.
     // The null byte (0x00) is used as a separator/flush; we skip it.
+    // out2=0xFF is the halt signal — stop the simulation.
     // -----------------------------------------------------------------------
     always @(posedge clk) begin
+        if (!rst && out2 == 8'hFF) begin
+            $display("\n--- halt (exit) at cycle %0d ---", cycle_count);
+            $finish;
+        end
         if (!rst && out2 == 8'h01 && out1 != 8'h00)
             $write("%c", out1);
     end
 
     // -----------------------------------------------------------------------
-    // Keyboard input: "help\n"
+    // Keyboard input: "help\n" then "exit\n"
     //
     // Protocol (from the assembly):
     //   1. CPU polls in1 with "mov a, in1"  (opcode 0x2) in a tight loop.
@@ -59,7 +70,7 @@ module tb_cpu;
     //
     // We detect opcode 0x3 via hierarchical reference to advance the buffer.
     // -----------------------------------------------------------------------
-    localparam KBD_LEN = 5;
+    localparam KBD_LEN = 10;
     reg [7:0] kbd [0:KBD_LEN-1];
     reg [3:0] kbd_ptr = 0;
 
@@ -69,6 +80,11 @@ module tb_cpu;
         kbd[2] = "l";
         kbd[3] = "p";
         kbd[4] = 8'h0a;   // '\n'
+        kbd[5] = "e";
+        kbd[6] = "x";
+        kbd[7] = "i";
+        kbd[8] = "t";
+        kbd[9] = 8'h0a;   // '\n'
     end
 
     // Expose CPU opcode for testbench logic (hierarchical reference)
@@ -96,9 +112,6 @@ module tb_cpu;
     // -----------------------------------------------------------------------
     // Simulation control
     // -----------------------------------------------------------------------
-    integer cycle_count = 0;
-    always @(posedge clk) cycle_count <= cycle_count + 1;
-
     initial begin
         $dumpfile("cpu_sim.vcd");
         $dumpvars(0, tb_cpu);
@@ -111,14 +124,10 @@ module tb_cpu;
 
         $display("--- simulation start ---\n");
 
-        // Run long enough to see: welcome banner + prompt + "help" command + response
-        // Banner: ~58 instructions
-        // Prompt: ~14 instructions
-        // read_loop spin: ~3 per char × 5 chars + processing = ~200 cycles
-        // Help text: ~80 instructions
-        repeat(12000) @(posedge clk);
+        // Safety timeout — normally the CPU halts itself via out2=0xFF (exit command)
+        repeat(500000) @(posedge clk);
 
-        $display("\n\n--- simulation done at cycle %0d ---", cycle_count);
+        $display("\n\n--- timeout at cycle %0d ---", cycle_count);
         $finish;
     end
 

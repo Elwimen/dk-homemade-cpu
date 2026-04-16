@@ -38,8 +38,13 @@ module tb_interactive;
 
     // -----------------------------------------------------------------------
     // TTY output — print whenever out2=1 and out1 is a non-null character
+    // out2=0xFF is the halt signal — stop the simulation immediately
     // -----------------------------------------------------------------------
     always @(posedge clk) begin
+        if (!rst && out2 == 8'hFF) begin
+            $write("\n");
+            $finish;
+        end
         if (!rst && out2 == 8'h01 && out1 != 8'h00)
             $write("%c", out1);
     end

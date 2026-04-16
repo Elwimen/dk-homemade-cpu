@@ -25,7 +25,7 @@
 //   in1  — keyboard-ready flag (1 = character available)
 //   in2  — keyboard character (ASCII)
 //   out1 — TTY character
-//   out2 — TTY mode: 0=off, 1=print out1, 2=echo keyboard char
+//   out2 — TTY mode: 0=off, 1=print out1, 2=echo keyboard char, 0xFF=halt
 
 `timescale 1ns/1ps
 `default_nettype none
