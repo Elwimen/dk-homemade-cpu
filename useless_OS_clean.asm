@@ -32,7 +32,7 @@ start:
     mov out1, 'v'
     mov out1, '7'
     mov out1, '.'
-    mov out1, '3'
+    mov out1, '5'
     mov out1, '\n'
     mov out1, 'B'
     mov out1, 'y'

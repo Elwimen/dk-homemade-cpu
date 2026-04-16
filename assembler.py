@@ -103,6 +103,107 @@ def encode(mnemonic, operands, labels, line_num):
         raise ValueError(f"Unknown mnemonic: '{mnemonic}'")
 
 
+STRING_ESCAPE_MAP = {
+    'n': '\n', 'r': '\r', 't': '\t', '0': '\x00',
+    '\\': '\\', "'": "'", '"': '"',
+}
+
+
+def parse_string_literal(token):
+    """Parse a double-quoted string literal, returning a list of characters."""
+    token = token.strip()
+    if not (token.startswith('"') and token.endswith('"') and len(token) >= 2):
+        return None
+    inner = token[1:-1]
+    chars = []
+    i = 0
+    while i < len(inner):
+        if inner[i] == '\\' and i + 1 < len(inner):
+            esc = inner[i + 1]
+            if esc in STRING_ESCAPE_MAP:
+                chars.append(STRING_ESCAPE_MAP[esc])
+                i += 2
+            else:
+                raise ValueError(f"Unknown escape sequence: \\{esc}")
+        elif inner[i] == '"':
+            raise ValueError("Unexpected '\"' inside string literal")
+        else:
+            chars.append(inner[i])
+            i += 1
+    return chars
+
+
+def expand_string_literals(source_lines):
+    """
+    Pre-process source lines, expanding  mov <dst>, "string"  into one
+    mov-per-character instruction.  The label (if any) is kept on the
+    first expanded line; subsequent lines have no label.
+    """
+    result = []
+    for line in source_lines:
+        # Strip comment and trailing whitespace for pattern matching only
+        comment_pos = line.find(';')
+        code_part = line[:comment_pos].rstrip() if comment_pos != -1 else line.rstrip()
+        comment_part = line[comment_pos:].rstrip() if comment_pos != -1 else ''
+
+        # Check for a string operand: anything containing a double-quoted token
+        # after the comma in a mov instruction.
+        str_match = re.match(
+            r'^(\s*(?:[A-Za-z_][A-Za-z0-9_]*\s*:\s*)?)'   # optional label+indent
+            r'(mov\s+\S+\s*,\s*)'                           # "mov dst, "
+            r'("(?:[^"\\]|\\.)*")'                          # "string"
+            r'\s*$',
+            code_part,
+            re.IGNORECASE,
+        )
+        if not str_match:
+            result.append(line)
+            continue
+
+        prefix, mov_dst_part, str_token = str_match.group(1), str_match.group(2), str_match.group(3)
+        try:
+            chars = parse_string_literal(str_token)
+        except ValueError:
+            # Let the main assembler report the error with a line number
+            result.append(line)
+            continue
+
+        # Extract destination operand (e.g. "out1") from "mov out1, "
+        dst = mov_dst_part.strip()[4:].rstrip(' ,').strip()  # strip "mov" and trailing ", "
+
+        # Separate the label (if any) from the indent
+        label_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*\s*:\s*)?', prefix)
+        indent = label_match.group(1) if label_match else '    '
+        label_part = label_match.group(2) if label_match and label_match.group(2) else ''
+
+        for i, ch in enumerate(chars):
+            lbl = label_part if i == 0 else ' ' * len(label_part)
+            # Represent char as a safe single-quoted literal
+            if ch == "'":
+                char_tok = "0x27"
+            elif ch == '\\':
+                char_tok = "0x5c"
+            elif ch == '\n':
+                char_tok = "'\\n'"
+            elif ch == '\r':
+                char_tok = "'\\r'"
+            elif ch == '\t':
+                char_tok = "'\\t'"
+            elif ch == '\x00':
+                char_tok = "0x0"
+            elif 0x20 <= ord(ch) <= 0x7e:
+                char_tok = f"'{ch}'"
+            else:
+                char_tok = f"0x{ord(ch):02x}"
+            result.append(f"{indent}{lbl}mov {dst}, {char_tok}\n")
+
+        if not chars:
+            # Empty string: emit nothing (no instructions)
+            pass
+
+    return result
+
+
 def split_operands(operand_str):
     """Split operand string by commas, ignoring commas inside character literals."""
     operands = []
@@ -145,8 +246,8 @@ def tokenize_line(line, line_num):
 
     label = None
 
-    # Detect label: identifier followed by colon
-    label_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s*:(.*)', line)
+    # Detect label: identifier or numeric address (decimal / 0x hex) followed by colon
+    label_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*|0[xX][0-9A-Fa-f]+|[0-9]+)\s*:(.*)', line)
     if label_match:
         label = label_match.group(1)
         line = label_match.group(2).strip()
@@ -171,6 +272,8 @@ def assemble(source_lines):
     Two-pass assembler.
     Returns a list of 12-bit encoded instructions.
     """
+
+    source_lines = expand_string_literals(source_lines)
 
     # --- First pass: collect label addresses ---
     labels = {}
