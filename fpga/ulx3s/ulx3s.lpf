@@ -1,0 +1,25 @@
+# ULX3S pin constraints — LFE5U-12F CABGA256
+# Radiona ULX3S v3.0.x
+
+LOCATE COMP "clk_25mhz" SITE "G2";
+IOBUF PORT "clk_25mhz" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk_25mhz" 25.000000 MHz;
+
+# btn[0] — active-high reset
+LOCATE COMP "rst" SITE "R1";
+IOBUF PORT "rst" IO_TYPE=LVCMOS33;
+
+# UART via FTDI USB chip
+LOCATE COMP "uart_tx" SITE "L4";   # FPGA → ftdi_rxd
+IOBUF PORT "uart_tx" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "uart_rx" SITE "M1";   # ftdi_txd → FPGA
+IOBUF PORT "uart_rx" IO_TYPE=LVCMOS33;
+
+# LEDs — active-high
+LOCATE COMP "led[0]" SITE "B2";
+LOCATE COMP "led[1]" SITE "C2";
+LOCATE COMP "led[2]" SITE "C1";
+IOBUF PORT "led[0]" IO_TYPE=LVCMOS33;
+IOBUF PORT "led[1]" IO_TYPE=LVCMOS33;
+IOBUF PORT "led[2]" IO_TYPE=LVCMOS33;
