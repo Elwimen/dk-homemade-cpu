@@ -9,29 +9,29 @@ A homemade 8-bit Harvard architecture CPU designed in Logisim, implemented in Ve
 ## Running the Assembler
 
 ```bash
-python3 assembler.py <source.asm>            # outputs <source.hex>
-python3 assembler.py <source.asm> -o out.hex
+python3 tools/assembler.py <source.asm>            # outputs <source.hex>
+python3 tools/assembler.py <source.asm> -o out.hex
 ```
 
 Two-pass assembler. Supports labels, comments (`;`), hex literals (`0xff`), decimal, and character literals (`'A'`, `'\n'`). Output is Logisim `v2.0 raw` hex format.
 
-`useless_OS_clean.asm` is the canonical labelled source; it assembles identically to `useless_OS.hex`.
+`asm/useless_OS.asm` is the canonical labelled source.
 
 ## Running the Disassembler
 
 ```bash
-python3 disassembler.py                          # default: useless_OS.hex → useless_OS.asm
-python3 disassembler.py <input.hex>
-python3 disassembler.py <input.hex> -o out.asm
+python3 tools/disassembler.py                          # default: asm/useless_OS.hex → asm/useless_OS.asm
+python3 tools/disassembler.py <input.hex>
+python3 tools/disassembler.py <input.hex> -o out.asm
 ```
 
 ## Running the Netlist Extractor
 
 ```bash
-python3 extract_netlist.py                           # → cpu_netlist.json
-python3 extract_netlist.py CPU_design.circ -o out.json
-python3 extract_netlist.py --summary                 # also print net summary to stdout
-netlistsvg cpu_netlist.json -o cpu_netlist.svg       # render to SVG
+python3 tools/extract_netlist.py                           # → cpu_netlist.json
+python3 tools/extract_netlist.py design/CPU_design.circ -o out.json
+python3 tools/extract_netlist.py --summary                 # also print net summary to stdout
+netlistsvg cpu_netlist.json -o cpu_netlist.svg             # render to SVG
 ```
 
 Parses the Logisim `.circ` file, flood-fills wire segments into nets, decodes Splitter pin geometry, and emits a netlistsvg-compatible JSON with 11 high-level cells. `netlistsvg` is installed globally via npm.
@@ -39,10 +39,10 @@ Parses the Logisim `.circ` file, flood-fills wire segments into nets, decodes Sp
 ## Running the Python Simulator (Interactive)
 
 ```bash
-python3 cpu_sim.py                    # interactive shell with useless_OS.hex
-python3 cpu_sim.py <rom.hex>          # load a specific ROM image
-python3 cpu_sim.py --trace            # trace every instruction to stderr
-python3 cpu_sim.py --max-cycles N     # stop after N cycles
+python3 tools/cpu_sim.py                    # interactive shell with asm/useless_OS.hex
+python3 tools/cpu_sim.py <rom.hex>          # load a specific ROM image
+python3 tools/cpu_sim.py --trace            # trace every instruction to stderr
+python3 tools/cpu_sim.py --max-cycles N     # stop after N cycles
 ```
 
 Pure-Python cycle-accurate simulator. Runs in raw terminal mode — characters reach the CPU immediately. Blocks on stdin only when the CPU polls `in1` (opcode 0x2) and the buffer is empty.
@@ -50,7 +50,7 @@ Pure-Python cycle-accurate simulator. Runs in raw terminal mode — characters r
 ## Running the Verilog Simulation
 
 ```bash
-cd verilog
+cd src
 make        # generate rom_init.mem, compile with iverilog, run simulation
 make wave   # open cpu_sim.vcd in GTKWave
 make clean
@@ -58,7 +58,7 @@ make clean
 
 Or manually:
 ```bash
-cd verilog && iverilog -g2012 -Wall -o sim tb_cpu.v cpu.v && ./sim
+cd src && iverilog -g2012 -Wall -o cpu_sim tb_cpu.v cpu.v && ./cpu_sim
 ```
 
 Expected output includes the welcome banner, `Shell:>` prompt, keyboard input "help\n", and the help response.
@@ -85,9 +85,9 @@ Instructions are 12 bits: 4-bit opcode (bits 11-8) + 8-bit operand (bits 7-0).
 
 ## Hex File Format
 
-Logisim hex format: first line is `v2.0 raw`, followed by space-separated 3-digit hex values (12-bit words). `useless_OS.hex` is the ROM image.
+Logisim hex format: first line is `v2.0 raw`, followed by space-separated 3-digit hex values (12-bit words). `asm/useless_OS.hex` is the ROM image.
 
-`verilog/rom_init.mem` is the same data converted to one value per line for `$readmemh`.
+`src/rom_init.mem` is the same data converted to one value per line for `$readmemh`.
 
 ## Architecture Notes
 
@@ -106,11 +106,11 @@ Logisim hex format: first line is `v2.0 raw`, followed by space-separated 3-digi
 
 | File | Purpose |
 |------|---------|
-| `CPU_design.circ` | Logisim circuit (ground truth) |
-| `assembler.py` | .asm → Logisim .hex |
-| `disassembler.py` | Logisim .hex → .asm |
-| `extract_netlist.py` | Logisim .circ → netlistsvg JSON |
-| `cpu_sim.py` | Interactive Python CPU simulator |
-| `verilog/cpu.v` | Verilog RTL |
-| `verilog/tb_cpu.v` | Simulation testbench |
-| `useless_OS_clean.asm` | Annotated OS source |
+| `design/CPU_design.circ` | Logisim circuit (ground truth) |
+| `tools/assembler.py` | .asm → Logisim .hex |
+| `tools/disassembler.py` | Logisim .hex → .asm |
+| `tools/extract_netlist.py` | Logisim .circ → netlistsvg JSON |
+| `tools/cpu_sim.py` | Interactive Python CPU simulator |
+| `src/cpu.v` | Verilog RTL |
+| `src/tb_cpu.v` | Simulation testbench |
+| `asm/useless_OS.asm` | Annotated OS source |

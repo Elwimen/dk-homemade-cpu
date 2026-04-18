@@ -1,17 +1,17 @@
-ASM_FILES := $(wildcard *.asm)
+ASM_FILES := $(wildcard asm/*.asm)
 HEX_FILES := $(ASM_FILES:.asm=.hex)
 
 .PHONY: all clean
 all: $(HEX_FILES)
 
 .FORCE:
-%.hex: %.asm .FORCE
-	python3 assembler.py $< -o $@
+asm/%.hex: asm/%.asm .FORCE
+	python3 tools/assembler.py $< -o $@
 
-# make <stem>  →  assemble <stem>.asm into useless_OS.hex (active ROM)
-%: %.asm
-	python3 assembler.py $< -o useless_OS.hex
-	@echo "Note: assembled $< into useless_OS.hex (active ROM)"
+# make <stem>  →  assemble asm/<stem>.asm into asm/useless_OS.hex (active ROM)
+%: asm/%.asm
+	python3 tools/assembler.py $< -o asm/useless_OS.hex
+	@echo "Note: assembled $< into asm/useless_OS.hex (active ROM)"
 
 clean:
-	rm -f *.hex
+	rm -f asm/*.hex

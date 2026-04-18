@@ -2,7 +2,7 @@ SIM_EXE  := cpu_sim
 ISIM_EXE := cpu_isim
 VCD      := cpu_sim.vcd
 ROM_MEM  := rom_init.mem
-ROM_SRC  := ../useless_OS.hex
+ROM_SRC  := ../asm/useless_OS.hex
 
 .PHONY: all sim isim wave clean
 

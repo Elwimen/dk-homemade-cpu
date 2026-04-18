@@ -145,7 +145,7 @@ def disassemble_file(input_file_name, output_file_name):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="A disassembler for a custom CPU ISA.")
-    parser.add_argument("input_file", nargs='?', default="useless_OS.hex", help="The input file name containing the hex code to be disassembled. (default: %(default)s)")
+    parser.add_argument("input_file", nargs='?', default="asm/useless_OS.hex", help="The input file name containing the hex code to be disassembled. (default: %(default)s)")
     parser.add_argument("-o", "--output_file", help="The output file name where the disassembled code will be written.")
     #parser.add_argument("-d", "--disassembler_mode", action="store_true", help="Enable disassembler")
 

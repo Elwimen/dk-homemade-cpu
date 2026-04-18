@@ -39,13 +39,39 @@ module cpu (
     input  wire [7:0] in2,      // keyboard character
 
     // TTY interface
-    output reg  [7:0] out1,     // character to display
-    output reg  [7:0] out2      // TTY mode control
+    output reg  [7:0] out1,      // character to display
+    output reg  [7:0] out2,      // TTY mode control
+
+    // Combinational: value being written to out1 this cycle (valid when out1_wr=1)
+    // Use this as UART TX data so the transceiver latches the correct byte
+    output wire [7:0] out1_next,
+    output wire       out1_wr,   // high for one clock when out1 is being written
+
+    // Handshake: pulses for one clock when mov a, in2 executes
+    output wire       in2_rd,
+
+    // Stall: hold PC and suppress all writes while high
+    input  wire       stall
 );
 
     // -----------------------------------------------------------------------
     // Program Counter (8-bit, wraps at 256)
     // -----------------------------------------------------------------------
+    // Opcode encoding
+    localparam OP_MOV_OUT1_IMM = 4'h0,
+               OP_MOV_OUT2_IMM = 4'h1,
+               OP_MOV_A_IN1    = 4'h2,
+               OP_MOV_A_IN2    = 4'h3,
+               OP_MOV_A_MEM    = 4'h4,
+               OP_MOV_MEM_A    = 4'h5,
+               OP_MOV_OUT1_A   = 4'h6,
+               OP_MOV_A_IMM    = 4'h7,
+               OP_NAND         = 4'h8,
+               OP_CMP          = 4'h9,
+               OP_JMP          = 4'hA,
+               OP_JE           = 4'hB,
+               OP_JNE          = 4'hC;
+
     reg [7:0] pc;
 
     // -----------------------------------------------------------------------
@@ -62,13 +88,21 @@ module cpu (
     // Data RAM: 256 × 8-bit  (async read, sync write)
     // -----------------------------------------------------------------------
     reg [7:0] ram [0:255];
-    wire [7:0] ram_rdata = ram[operand];   // combinational read
+    reg [7:0] ram_rdata;                   // registered read — enables M4K block RAM inference
+    always @(posedge clk)
+        ram_rdata <= ram[operand];
 
     // -----------------------------------------------------------------------
     // Registers
     // -----------------------------------------------------------------------
     reg [7:0] reg_a;      // accumulator
     reg       eq_flag;    // equality flag, written by CMP
+    reg       load_pending; // stall flag: reg_a ← ram_rdata next cycle
+
+    assign in2_rd    = !rst && !load_pending && !stall && (opcode == OP_MOV_A_IN2);
+    assign out1_wr   = !rst && !load_pending && !stall &&
+                       (opcode == OP_MOV_OUT1_IMM || opcode == OP_MOV_OUT1_A);
+    assign out1_next = data_bus;
 
     // -----------------------------------------------------------------------
     // Data-bus mux (combinational)
@@ -80,15 +114,15 @@ module cpu (
     reg [7:0] data_bus;
     always @(*) begin
         case (opcode)
-            4'h0: data_bus = operand;             // mov out1, imm
-            4'h1: data_bus = operand;             // mov out2, imm
-            4'h2: data_bus = {7'b0, in1};         // mov a, in1  (zero-extend 1→8)
-            4'h3: data_bus = in2;                 // mov a, in2
-            4'h4: data_bus = ram_rdata;           // mov a, [addr]
-            4'h6: data_bus = reg_a;               // mov out1, a
-            4'h7: data_bus = operand;             // mov a, imm
-            4'h8: data_bus = ~(reg_a & operand);  // nand a, imm
-            default: data_bus = 8'h00;
+            OP_MOV_OUT1_IMM: data_bus = operand;
+            OP_MOV_OUT2_IMM: data_bus = operand;
+            OP_MOV_A_IN1:    data_bus = {7'b0, in1};
+            OP_MOV_A_IN2:    data_bus = in2;
+            OP_MOV_A_MEM:    data_bus = ram_rdata;
+            OP_MOV_OUT1_A:   data_bus = reg_a;
+            OP_MOV_A_IMM:    data_bus = operand;
+            OP_NAND:         data_bus = ~(reg_a & operand);
+            default:         data_bus = 8'h00;
         endcase
     end
 
@@ -97,33 +131,42 @@ module cpu (
     // -----------------------------------------------------------------------
     always @(posedge clk) begin
         if (rst) begin
-            pc      <= 8'h00;
-            reg_a   <= 8'h00;
-            out1    <= 8'h00;
-            out2    <= 8'h00;
-            eq_flag <= 1'b0;
+            pc           <= 8'h00;
+            reg_a        <= 8'h00;
+            out1         <= 8'h00;
+            out2         <= 8'h00;
+            eq_flag      <= 1'b0;
+            load_pending <= 1'b0;
+        end else if (stall) begin
+            // freeze: UART TX is busy, wait for it to drain
+        end else if (load_pending) begin
+            // Stall cycle: RAM read has settled, commit to reg_a and resume
+            reg_a        <= ram_rdata;
+            load_pending <= 1'b0;
+            pc           <= pc + 8'd1;
         end else begin
 
             // ---- Program Counter ----------------------------------------
             case (opcode)
-                4'hA: pc <= operand;                              // jmp
-                4'hB: pc <= eq_flag  ? operand : pc + 8'd1;     // je
-                4'hC: pc <= !eq_flag ? operand : pc + 8'd1;     // jne
-                default: pc <= pc + 8'd1;
+                OP_JMP:      pc <= operand;
+                OP_JE:       pc <= eq_flag  ? operand : pc + 8'd1;
+                OP_JNE:      pc <= !eq_flag ? operand : pc + 8'd1;
+                OP_MOV_A_MEM: ;                              // stall: hold pc
+                default:     pc <= pc + 8'd1;
             endcase
 
             // ---- Register and RAM writes ---------------------------------
             case (opcode)
-                4'h0: out1  <= data_bus;             // mov out1, imm
-                4'h1: out2  <= data_bus;             // mov out2, imm
-                4'h2: reg_a <= data_bus;             // mov a, in1
-                4'h3: reg_a <= data_bus;             // mov a, in2
-                4'h4: reg_a <= data_bus;             // mov a, [addr]
-                4'h5: ram[operand] <= reg_a;         // mov [addr], a
-                4'h6: out1  <= data_bus;             // mov out1, a
-                4'h7: reg_a <= data_bus;             // mov a, imm
-                4'h8: reg_a <= data_bus;             // nand a, imm
-                4'h9: eq_flag <= (reg_a == operand); // cmp  a, imm
+                OP_MOV_OUT1_IMM: out1         <= data_bus;
+                OP_MOV_OUT2_IMM: out2         <= data_bus;
+                OP_MOV_A_IN1:    reg_a        <= data_bus;
+                OP_MOV_A_IN2:    reg_a        <= data_bus;
+                OP_MOV_A_MEM:    load_pending <= 1'b1;      // result arrives next cycle
+                OP_MOV_MEM_A:    ram[operand] <= reg_a;
+                OP_MOV_OUT1_A:   out1         <= data_bus;
+                OP_MOV_A_IMM:    reg_a        <= data_bus;
+                OP_NAND:         reg_a        <= data_bus;
+                OP_CMP:          eq_flag      <= (reg_a == operand);
                 default: ;
             endcase
 

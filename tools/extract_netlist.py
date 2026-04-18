@@ -520,8 +520,8 @@ def dump_net_summary(nets, net_map, buses, databus, pt_to_net):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('input', nargs='?', default='CPU_design.circ',
-                    help='Logisim .circ file (default: CPU_design.circ)')
+    ap.add_argument('input', nargs='?', default='design/CPU_design.circ',
+                    help='Logisim .circ file (default: design/CPU_design.circ)')
     ap.add_argument('-o', '--output', default='cpu_netlist.json',
                     help='Output JSON file (default: cpu_netlist.json)')
     ap.add_argument('--summary', action='store_true',

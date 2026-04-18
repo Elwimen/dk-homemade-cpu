@@ -6,7 +6,7 @@ Loads the ROM from a Logisim hex file and runs the CPU cycle by cycle,
 connecting TTY output to stdout and keyboard input to stdin.
 
 Usage:
-    python3 cpu_sim.py                        # loads useless_OS.hex
+    python3 tools/cpu_sim.py                  # loads asm/useless_OS.hex
     python3 cpu_sim.py <rom.hex>              # loads a specific ROM image
     python3 cpu_sim.py --trace                # print every instruction executed
     python3 cpu_sim.py --max-cycles N         # stop after N cycles (default: unlimited)
@@ -312,8 +312,8 @@ def main():
     ap.add_argument(
         "rom",
         nargs="?",
-        default="useless_OS.hex",
-        help="ROM image in Logisim v2.0 raw format (default: useless_OS.hex)",
+        default="asm/useless_OS.hex",
+        help="ROM image in Logisim v2.0 raw format (default: asm/useless_OS.hex)",
     )
     ap.add_argument(
         "--trace", action="store_true", help="Print every instruction to stderr"
