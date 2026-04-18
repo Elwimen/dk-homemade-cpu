@@ -1,8 +1,8 @@
 SRCS    := ../../src/cpu.v ../../src/uart_rx.v ../../src/uart_tx.v ../../src/top_ulx3s.v
-ROM_MEM := ../../src/rom_init.mem
+ROM_MEM := rom_init.mem
 ROM_SRC := ../../asm/useless_OS.hex
 
-.PHONY: all flash clean
+.PHONY: all sram flash clean
 
 all: ulx3s.bit
 
@@ -19,13 +19,16 @@ ulx3s.json: $(SRCS) $(ROM_MEM)
 	yosys -p "synth_ecp5 -top top_ulx3s -json $@" $(SRCS)
 
 ulx3s.config: ulx3s.json ulx3s.lpf
-	nextpnr-ecp5 --12k --package CABGA256 --lpf ulx3s.lpf --json ulx3s.json --textcfg $@
+	nextpnr-ecp5 --12k --package CABGA381 --lpf ulx3s.lpf --json ulx3s.json --textcfg $@
 
 ulx3s.bit: ulx3s.config
 	ecppack ulx3s.config $@
 
-flash: ulx3s.bit
+sram: ulx3s.bit
 	openFPGALoader -b ulx3s $<
 
+flash: ulx3s.bit
+	openFPGALoader -b ulx3s --write-flash $<
+
 clean:
-	rm -f ulx3s.json ulx3s.config ulx3s.bit
+	rm -f ulx3s.json ulx3s.config ulx3s.bit rom_init.mem

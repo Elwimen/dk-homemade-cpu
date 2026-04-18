@@ -81,8 +81,7 @@ module top (
     wire tx_stb = cpu_out1_wr && (cpu_out2 == OUT2_PRINT);
 
     // Stall the CPU when it wants to print but the UART is still busy.
-    wire cpu_stall = (cpu_out2 == OUT2_PRINT) &&
-                     (cpu_out1_wr || tx_busy) && tx_busy;
+    wire cpu_stall = (cpu_out2 == OUT2_PRINT) && tx_busy;
 
     uart_tx #(.CLKS_PER_BIT(CLKS_PER_BIT)) u_tx (
         .clk  (clk),

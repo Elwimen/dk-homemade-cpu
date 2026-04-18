@@ -2,12 +2,12 @@
 
 module top_ulx3s (
     input  wire       clk_25mhz,
-    input  wire       rst,       // btn[0] — active-high
+    input  wire       rst,       // btn[0] PWRn — active-low
     input  wire       uart_rx,   // ftdi_txd → FPGA (pin M1)
     output wire       uart_tx,   // FPGA → ftdi_rxd (pin L4)
 
     // Onboard LEDs — active-high
-    output wire [2:0] led        // [0]=cpu, [1]=tx, [2]=rx
+    output wire [7:0] led,       // [0]=cpu, [1]=tx, [2]=rx, [7]=heartbeat
 );
     // 25 MHz / 9600 baud
     parameter CLKS_PER_BIT = 2604;
@@ -18,11 +18,11 @@ module top_ulx3s (
                OUT2_HALT  = 8'hFF;
 
     // -----------------------------------------------------------------------
-    // Reset synchroniser — btn[0] is active-high, double-flop
+    // Reset synchroniser — btn[0] PWRn is active-low, invert + double-flop
     // -----------------------------------------------------------------------
     reg rst_s0, rst_s1;
     always @(posedge clk_25mhz) begin
-        rst_s0 <= rst;
+        rst_s0 <= ~rst;
         rst_s1 <= rst_s0;
     end
     wire rst_sync = rst_s1;
@@ -70,8 +70,7 @@ module top_ulx3s (
     wire       tx_busy;
 
     wire tx_stb   = cpu_out1_wr && (cpu_out2 == OUT2_PRINT);
-    wire cpu_stall = (cpu_out2 == OUT2_PRINT) &&
-                     (cpu_out1_wr || tx_busy) && tx_busy;
+    wire cpu_stall = (cpu_out2 == OUT2_PRINT) && tx_busy;
 
     uart_tx #(.CLKS_PER_BIT(CLKS_PER_BIT)) u_tx (
         .clk  (clk_25mhz),
@@ -111,10 +110,12 @@ module top_ulx3s (
                       (cpu_out2 != OUT2_PRINT) &&
                       (cpu_out2 != OUT2_ECHO);
 
-    assign led[0] = cpu_halted ? 1'b0 :   // off when halted
-                    cpu_error  ? blink :   // blink on error
-                                 1'b1;     // on when running
-    assign led[1] = ~uart_tx;             // activity on TX
-    assign led[2] = ~uart_rx;             // activity on RX
+    assign led[0]   = cpu_halted ? 1'b0 :   // off when halted
+                      cpu_error  ? blink :   // blink on error
+                                   1'b1;     // on when running
+    assign led[1]   = ~uart_tx;             // activity on TX
+    assign led[2]   = ~uart_rx;             // activity on RX
+    assign led[6:3] = 4'b0;
+    assign led[7]   = blink_cnt[22];        // ~6 Hz heartbeat
 
 endmodule
