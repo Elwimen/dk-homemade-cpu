@@ -1,6 +1,6 @@
 `default_nettype none
 
-module top (
+module top_cyclone (
     input  wire clk,
     input  wire rst_n,      // active-low onboard button (PIN_144)
     input  wire uart_rx,    // UART RX  (PIN_74)
