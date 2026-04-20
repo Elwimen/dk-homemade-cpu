@@ -1,10 +1,11 @@
 ASM_FILES    := $(wildcard asm/*.asm)
 HEX_FILES    := $(ASM_FILES:.asm=.hex)
 FPGA_TARGETS := $(patsubst fpga/%/,%,$(wildcard fpga/*/))
+FPGA_ACTIONS := sram flash
 
-.PHONY: all clean $(FPGA_TARGETS) \
-        $(addsuffix -sram,$(FPGA_TARGETS)) \
-        $(addsuffix -flash,$(FPGA_TARGETS))
+_ACTION := $(firstword $(filter $(FPGA_ACTIONS),$(MAKECMDGOALS)))
+
+.PHONY: all clean sram flash
 
 all: $(HEX_FILES)
 
@@ -18,20 +19,25 @@ asm/%.hex: asm/%.asm .FORCE
 	python3 tools/assembler.py $< -o asm/useless_OS.hex
 	@echo "Note: assembled $< into asm/useless_OS.hex (active ROM)"
 
-# ── FPGA targets (auto-discovered from fpga/ subfolders) ───────────────────
-# make <board>        — build bitstream
-# make <board>-sram   — build + program SRAM (volatile)
-# make <board>-flash  — build + program flash (persistent)
+# ── FPGA targets ───────────────────────────────────────────────────────────
+# Generates for each board in fpga/: <board>  <board>-sram  <board>-flash
+# Two-word form also works: make <board> sram|flash
 
-$(FPGA_TARGETS): %:
-	$(MAKE) -C fpga/$@
+define fpga_rules
+.PHONY: $(1) $(1)-sram $(1)-flash
+$(1):
+	$$(MAKE) -C fpga/$(1) $$(_ACTION)
+$(1)-sram:
+	$$(MAKE) -C fpga/$(1) sram
+$(1)-flash:
+	$$(MAKE) -C fpga/$(1) flash
+endef
 
-$(addsuffix -sram,$(FPGA_TARGETS)): %-sram:
-	$(MAKE) -C fpga/$* sram
+$(foreach t,$(FPGA_TARGETS),$(eval $(call fpga_rules,$(t))))
 
-$(addsuffix -flash,$(FPGA_TARGETS)): %-flash:
-	$(MAKE) -C fpga/$* flash
+sram flash: ;
 
 # ── Cleanup ────────────────────────────────────────────────────────────────
 clean:
 	rm -f asm/*.hex
+	$(foreach t,$(FPGA_TARGETS),$(MAKE) -C fpga/$(t) clean;)
