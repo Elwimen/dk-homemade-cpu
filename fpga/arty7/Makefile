@@ -24,4 +24,5 @@ flash: $(BITFILE)
 	openFPGALoader -b $(BOARD) --write-flash $(BITFILE)
 
 clean:
-	rm -rf vivado.jou vivado.log .Xil rom_init.mem $(BITFILE)
+	rm -rf vivado.jou vivado.log vivado_*.backup.jou vivado_*.backup.log \
+	       clockInfo.txt .Xil rom_init.mem $(BITFILE)

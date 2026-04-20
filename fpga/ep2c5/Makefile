@@ -28,3 +28,5 @@ flash: $(PROJECT).pof
 
 clean:
 	rm -rf output_files db incremental_db greybox_tmp rom_init.mem $(PROJECT).pof
+	rm -f $(PROJECT).done $(PROJECT).jdi $(PROJECT).pin $(PROJECT).sof \
+	      $(PROJECT).*.rpt $(PROJECT).*.smsg $(PROJECT).*.summary
