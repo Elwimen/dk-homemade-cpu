@@ -1,12 +1,12 @@
 # Quartus II settings file for dkcpu — 8-bit Harvard CPU
-# Target: EP2C5T144C8N (Cyclone II mini board)
+# Target: EP4CE6E22C8N (Cyclone IV E mini board)
 # Quartus II 13.0sp1
 
-set_global_assignment -name FAMILY "Cyclone II"
-set_global_assignment -name DEVICE EP2C5T144C8
+set_global_assignment -name FAMILY "Cyclone IV E"
+set_global_assignment -name DEVICE EP4CE6E22C8
 set_global_assignment -name TOP_LEVEL_ENTITY top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.0
-set_global_assignment -name PROJECT_CREATION_TIME_DATE "2026:04:17"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "2026:04:18"
 set_global_assignment -name LAST_QUARTUS_VERSION "13.0 SP1"
 
 # Source files
@@ -15,8 +15,8 @@ set_global_assignment -name VERILOG_FILE ../../src/cpu.v
 set_global_assignment -name VERILOG_FILE ../../src/uart_rx.v
 set_global_assignment -name VERILOG_FILE ../../src/uart_tx.v
 
-# rom_init.mem lives in src/; Quartus resolves $readmemh relative to .qpf
-set_global_assignment -name SEARCH_PATH ../../src/
+# rom_init.mem generated locally by Makefile
+set_global_assignment -name SEARCH_PATH .
 
 # Timing / device settings
 set_global_assignment -name NOMINAL_CORE_SUPPLY_VOLTAGE 1.2V
@@ -29,25 +29,25 @@ set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED WITH WE
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
 # ============================================================
-# PIN ASSIGNMENTS — EP2C5T144C8N mini board
+# PIN ASSIGNMENTS — EP4CE6E22C8N mini board
 # ============================================================
 
 # Clock: 50 MHz oscillator
-set_location_assignment PIN_17  -to clk
+set_location_assignment PIN_25  -to clk
 
-# Reset: onboard pushbutton to GND (active-low); pull-up holds high at rest
-set_location_assignment PIN_144 -to rst_n
+# Reset: K2 button to GND (active-low); pull-up holds high at rest
+set_location_assignment PIN_73 -to rst_n
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to rst_n
 
 # UART
-set_location_assignment PIN_73 -to uart_tx
-set_location_assignment PIN_74 -to uart_rx
+set_location_assignment PIN_75 -to uart_tx
+set_location_assignment PIN_76 -to uart_rx
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to uart_rx
 
 # Onboard LEDs (active-low)
 set_location_assignment PIN_3 -to led_cpu
-set_location_assignment PIN_7 -to led_tx
-set_location_assignment PIN_9 -to led_rx
+set_location_assignment PIN_2 -to led_tx
+set_location_assignment PIN_1 -to led_rx
 
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top

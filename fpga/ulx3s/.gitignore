@@ -1,0 +1,4 @@
+*.mem
+*.bit
+*.config
+*.json
