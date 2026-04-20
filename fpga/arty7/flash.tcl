@@ -1,5 +1,6 @@
-set bitfile /home/dmj/code/fpga/dkcpu/vivado/dkcpu.runs/impl_1/top_arty.bit
-set mcsfile /home/dmj/code/fpga/dkcpu/vivado/dkcpu.runs/impl_1/dkcpu.mcs
+set here    [file dirname [file normalize [info script]]]
+set bitfile [file join $here dkcpu.bit]
+set mcsfile [file join $here dkcpu.mcs]
 
 write_cfgmem -format mcs -size 128 -interface SPIx4 \
              -loadbit "up 0x0 $bitfile" -file $mcsfile -force

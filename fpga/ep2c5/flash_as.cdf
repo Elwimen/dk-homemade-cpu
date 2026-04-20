@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EPCS4) Path("/home/dmj/code/homemade-CPU/fpga/ep2c5/") File("dkcpu.pof") MfrSpec(OpMask(7) Child_OpMask(1 7));
+		Device PartName(EPCS4) Path(".") File("dkcpu.pof") MfrSpec(OpMask(7) Child_OpMask(1 7));
 
 ChainEnd;
 
