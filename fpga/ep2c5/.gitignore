@@ -1,0 +1,13 @@
+output_files/
+db/
+incremental_db/
+greybox_tmp/
+rom_init.mem
+*.sof
+*.pof
+*.done
+*.jdi
+*.pin
+*.rpt
+*.smsg
+*.summary

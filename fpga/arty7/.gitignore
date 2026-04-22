@@ -1,0 +1,9 @@
+.Xil/
+vivado.jou
+vivado.log
+vivado_*.backup.jou
+vivado_*.backup.log
+clockInfo.txt
+rom_init.mem
+dkcpu.bit
+dkcpu.mcs
